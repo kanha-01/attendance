@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+:root {
+  --bg:           #0f1117;
+  --surface:      #171b26;
+  --surface-2:    #1e2233;
+  --border:       #252836;
+  --text-primary: #e8eaf0;
+  --text-muted:   #7b8099;
+  --brand:        #6171f3;
+  --brand-glow:   rgba(97,113,243,.3);
+  --green:        #22c55e;
+  --red:          #ef4444;
+  --yellow:       #f59e0b;
+  --cyan:         #06b6d4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3f55; }
+
+/* ── Form helpers ───────────────────────────────────────────────────────────── */
+.input-base {
+  @apply w-full rounded-xl border border-surface-border bg-surface-card px-4 py-3
+         text-sm text-white placeholder-zinc-500
+         focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+         transition-all duration-200;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600
+         px-5 py-2.5 text-sm font-semibold text-white
+         hover:bg-brand-500 active:scale-[.98]
+         focus:outline-none focus:ring-2 focus:ring-brand-400
+         transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-surface-border
+         px-5 py-2.5 text-sm font-medium text-zinc-300
+         hover:bg-surface-hover hover:text-white active:scale-[.98]
+         transition-all duration-200;
+}
+
+.card {
+  @apply rounded-2xl border border-surface-border bg-surface-card p-6;
+}
+
+/* ── Webcam canvas overlay helpers ──────────────────────────────────────────── */
+.webcam-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.webcam-wrapper video,
+.webcam-wrapper canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────────── */
+.badge {
+  @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+}
+.badge-green  { @apply bg-green-500/15 text-green-400; }
+.badge-red    { @apply bg-red-500/15 text-red-400; }
+.badge-yellow { @apply bg-yellow-500/15 text-yellow-400; }
+.badge-blue   { @apply bg-brand-500/15 text-brand-400; }
+
+/* ── Page fade-in ───────────────────────────────────────────────────────────── */
+.page-enter {
+  animation: pageEnter .35s ease-out both;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Shimmer skeleton ───────────────────────────────────────────────────────── */
+.skeleton {
+  @apply rounded-lg bg-surface-card;
+  background: linear-gradient(90deg, #1a1f2e 25%, #222740 50%, #1a1f2e 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
