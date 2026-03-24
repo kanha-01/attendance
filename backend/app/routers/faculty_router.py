@@ -10,7 +10,8 @@ from ..auth import require_faculty
 
 from fastapi.responses import StreamingResponse
 import csv, io
-from datetime import date as date_type
+from datetime import date as date_type, datetime
+from typing import Optional
 
 router = APIRouter(prefix="/api/faculty", tags=["faculty"])
 
@@ -197,6 +198,7 @@ def get_profile(
 def export_attendance(
     course_id: int,
     format: str = "csv",
+    att_date: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user=Depends(require_faculty),
 ):
@@ -208,23 +210,75 @@ def export_attendance(
     if not course:
         raise HTTPException(404, "Course not found")
 
-    records = db.query(models.Attendance).filter(
-        models.Attendance.course_id == course_id
-    ).order_by(models.Attendance.date, models.Attendance.student_id).all()
+    # ── Fetch all enrolled students (ordered) ──────────────────────────────
+    enrollments = (
+        db.query(models.Enrollment)
+        .filter(models.Enrollment.course_id == course_id)
+        .join(models.Student)
+        .order_by(models.Student.reg_number)
+        .all()
+    )
 
+    # ── Fetch all attendance records (optionally filtered by date) ─────────
+    att_query = db.query(models.Attendance).filter(
+        models.Attendance.course_id == course_id
+    )
+    if att_date:
+        try:
+            d = datetime.strptime(att_date, "%Y-%m-%d").date()
+            att_query = att_query.filter(models.Attendance.date == d)
+        except ValueError:
+            raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+
+    records = att_query.order_by(models.Attendance.date).all()
+
+    # ── Build pivot: {student_id: {date_str: "P"/"A"}} ────────────────────
+    # Collect all unique dates in sorted order
+    all_dates = sorted({str(r.date) for r in records})
+
+    # Map student_id → attendance dict
+    attendance_map: dict[int, dict[str, str]] = {}
+    for r in records:
+        attendance_map.setdefault(r.student_id, {})[str(r.date)] = "P" if r.status else "A"
+
+    # ── Build rows ─────────────────────────────────────────────────────────
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Date", "Student Name", "Reg Number", "Present"])
-    for r in records:
+
+    # Header: Sr.No. | Reg No. | Name | date1 | date2 | ... | Total Present | Total Classes | %
+    header = ["Sr.No.", "Reg No.", "Name"] + all_dates + ["Total Present", "Total Classes", "Attendance %"]
+    writer.writerow(header)
+
+    for sr, enr in enumerate(enrollments, start=1):
+        student = enr.student
+        student_att = attendance_map.get(student.id, {})
+
+        # For each date: P if present, A if absent (default A if no record)
+        row_dates = [student_att.get(d, "A") for d in all_dates]
+
+        total_present = sum(1 for v in row_dates if v == "P")
+        total_classes = len(all_dates)
+        pct = round((total_present / total_classes * 100), 1) if total_classes > 0 else 0.0
+
         writer.writerow([
-            str(r.date),
-            r.student.name if r.student else "",
-            r.student.reg_number if r.student else "",
-            "Yes" if r.status else "No",
+            sr,
+            student.reg_number,
+            student.name.strip(),
+            *row_dates,
+            total_present,
+            total_classes,
+            f"{pct}%",
         ])
+
+    # ── Return as CSV stream ───────────────────────────────────────────────
     output.seek(0)
+    filename = f"{course.name.replace(' ', '_')}_attendance"
+    if att_date:
+        filename += f"_{att_date}"
+    filename += ".csv"
+
     return StreamingResponse(
         output,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={course.name}_attendance.csv"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
