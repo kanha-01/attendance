@@ -47,7 +47,7 @@ def extract_encoding_from_image(image_bytes: bytes) -> Optional[np.ndarray]:
         raise RuntimeError("face_recognition library not installed")
 
     rgb = image_bytes_to_rgb_array(image_bytes)
-    locations = face_recognition.face_locations(rgb, model="hog")
+    locations = face_recognition.face_locations(rgb, model="cnn")
 
     if len(locations) != REQUIRED_FACE_COUNT:
         logger.warning(
@@ -59,24 +59,34 @@ def extract_encoding_from_image(image_bytes: bytes) -> Optional[np.ndarray]:
     return encodings[0] if encodings else None
 
 
+# def process_registration_photos(photos_bytes: list[bytes]) -> Optional[list]:
+#     """
+#     Process up to 3 registration photos, extract encodings, and return
+#     a JSON-serialisable list of the individual encodings (averaged later
+#     at match-time for robustness).
+#     Returns None if any photo fails face detection.
+#     """
+#     encodings = []
+#     for idx, photo in enumerate(photos_bytes):
+#         enc = extract_encoding_from_image(photo)
+#         if enc is None:
+#             raise ValueError(
+#                 f"Photo {idx + 1}: exactly one face required, but none or multiple detected."
+#             )
+#         encodings.append(enc.tolist())
+
+#     return encodings  # list of 3 × [128 floats]
+
+# AFTER — skip failed photos, only fail if we got zero encodings total:
 def process_registration_photos(photos_bytes: list[bytes]) -> Optional[list]:
-    """
-    Process up to 3 registration photos, extract encodings, and return
-    a JSON-serialisable list of the individual encodings (averaged later
-    at match-time for robustness).
-    Returns None if any photo fails face detection.
-    """
     encodings = []
     for idx, photo in enumerate(photos_bytes):
         enc = extract_encoding_from_image(photo)
-        if enc is None:
-            raise ValueError(
-                f"Photo {idx + 1}: exactly one face required, but none or multiple detected."
-            )
-        encodings.append(enc.tolist())
-
-    return encodings  # list of 3 × [128 floats]
-
+        if enc is not None:
+            encodings.append(enc.tolist())
+    if len(encodings) == 0:
+        raise ValueError("No face detected in any uploaded photo.")
+    return encodings
 
 def serialize_encodings(encodings: list) -> str:
     """Serialize list-of-lists to JSON string for DB storage."""
@@ -123,10 +133,16 @@ def find_faces_in_frame(rgb_frame: np.ndarray):
     if not FACE_RECOGNITION_AVAILABLE:
         return []
 
-    locations = face_recognition.face_locations(rgb_frame, model="hog")
-    if not locations:
-        return []
+    # locations = face_recognition.face_locations(rgb_frame, model="hog")
+    # if not locations:
+    #     return []
 
+    # encodings = face_recognition.face_encodings(rgb_frame, known_face_locations=locations)
+    # landmarks_list = face_recognition.face_landmarks(rgb_frame, face_locations=locations)
+    small = np.ascontiguousarray(rgb_frame[::2, ::2])   # 50% scale
+    locations_small = face_recognition.face_locations(small, model="hog")
+    # Scale locations back to original size
+    locations = [(t*2, r*2, b*2, l*2) for (t,r,b,l) in locations_small]
     encodings = face_recognition.face_encodings(rgb_frame, known_face_locations=locations)
     landmarks_list = face_recognition.face_landmarks(rgb_frame, face_locations=locations)
 

@@ -21,8 +21,8 @@ from scipy.spatial import distance as dist
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-EAR_THRESHOLD      = 0.24    # below this → eye considered closed
-EAR_CONSEC_FRAMES  = 2       # consecutive closed frames required
+EAR_THRESHOLD      = 0.29    # below this → eye considered closed
+EAR_CONSEC_FRAMES  = 1       # consecutive closed frames required
 REQUIRED_BLINKS    = 1       # blinks needed to pass liveness check
 POSITION_TOLERANCE = 80      # pixels – same face if centre moved < this
 

@@ -64,7 +64,7 @@ def all_courses(
             "id": c.id,
             "name": c.name,
             "faculty_name": c.faculty.name if c.faculty else "Unknown",
-            "enrollment_key": c.enrollment_key,
+            # "enrollment_key": c.enrollment_key,
             "min_attendance_threshold": c.min_attendance_threshold,
             "student_count": count,
             "already_enrolled": c.id in enrolled_ids,
@@ -130,3 +130,21 @@ def get_profile(
         "username": current_user.username,
         "has_face_data": bool(student.face_encodings),
     }
+
+# ── Unenroll from a course ────────────────────────────────────────────────────
+# Add unenroll endpoint at the bottom of student_router.py:
+@router.delete("/enroll/{course_id}")
+def unenroll_course(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_student),
+):
+    student = _get_student(current_user, db)
+    enrollment = db.query(models.Enrollment).filter_by(
+        student_id=student.id, course_id=course_id
+    ).first()
+    if not enrollment:
+        raise HTTPException(404, "Not enrolled in this course")
+    db.delete(enrollment)
+    db.commit()
+    return {"message": "Successfully unenrolled"}

@@ -12,13 +12,21 @@ import { useAuth } from '../context/AuthContext'
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement)
 
 export default function FacultyDashboard() {
-  const { user }          = useAuth()
-  const navigate          = useNavigate()
-  const [courses, setCourses]   = useState([])
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [courses, setCourses] = useState([])
   const [selected, setSelected] = useState(null)  // course stats
-  const [loading, setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [selectedDate, setSelectedDate] = useState("");
+
+  // Fetch attendance with date filter:
+  const fetchAttendance = async (courseId, date) => {
+    const params = date ? `?att_date=${date}` : "";
+    const res = await axios.get(`/api/attendance/${courseId}${params}`);
+    setAttendanceData(res.data);
+  };
 
   const loadCourses = () => {
     setLoading(true)
@@ -52,7 +60,7 @@ export default function FacultyDashboard() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {[1,2,3].map(i => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="card space-y-3">
               <div className="skeleton h-4 w-2/3 rounded" />
               <div className="skeleton h-20 w-full rounded-lg" />
@@ -82,7 +90,15 @@ export default function FacultyDashboard() {
           {/* ── Stats panel ── */}
           <div className="xl:col-span-2">
             {selected
-              ? <StatsPanel stats={selected} />
+              ? (
+                <StatsPanel
+                  stats={selected}
+                  courseId={selected.course_id}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  fetchAttendance={fetchAttendance}
+                />
+              )
               : (
                 <div className="card h-full flex items-center justify-center text-center py-20">
                   <div>
@@ -127,8 +143,8 @@ function CourseCard({ course, isSelected, onSelect, onStart }) {
         className="w-full btn-primary text-xs py-2 justify-center"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <circle cx="12" cy="12" r="10"/>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 8l6 4-6 4V8z" fill="currentColor"/>
+          <circle cx="12" cy="12" r="10" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 8l6 4-6 4V8z" fill="currentColor" />
         </svg>
         Start Attendance
       </button>
@@ -137,9 +153,9 @@ function CourseCard({ course, isSelected, onSelect, onStart }) {
 }
 
 // ── Stats Panel ───────────────────────────────────────────────────────────────
-function StatsPanel({ stats }) {
+function StatsPanel({ stats, courseId, selectedDate, setSelectedDate, fetchAttendance }) {
   const { students, course_name, total_enrolled, total_classes,
-          average_attendance, below_threshold_count, min_threshold } = stats
+    average_attendance, below_threshold_count, min_threshold } = stats
 
   // Doughnut: above vs below threshold
   const doughnutData = {
@@ -181,19 +197,59 @@ function StatsPanel({ stats }) {
     }
   })
 
+  const handleExportCsv = async () => {
+    const response = await api.get(`/api/faculty/courses/${courseId}/export`, {
+      params: {
+        format: 'csv',
+        ...(selectedDate ? { att_date: selectedDate } : {}),
+      },
+      responseType: 'blob',
+    })
+
+    const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }))
+    const link = document.createElement('a')
+    const dateSuffix = selectedDate ? `-${selectedDate}` : '-all'
+    link.href = blobUrl
+    link.download = `attendance-course-${courseId}${dateSuffix}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(blobUrl)
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-bold text-xl text-white">{course_name}</h2>
-        <span className="badge badge-blue">
-          {total_classes} classes held
-        </span>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => { setSelectedDate(e.target.value); fetchAttendance(courseId, e.target.value); }}
+            className="input-base py-2 text-sm"
+          />
+          <button
+            onClick={() => { setSelectedDate(''); fetchAttendance(courseId, ''); }}
+            className="btn-ghost text-xs py-2"
+          >
+            Show all
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="btn-primary text-xs py-2"
+          >
+            Export CSV
+          </button>
+          <span className="badge badge-blue">
+            {total_classes} classes held
+          </span>
+        </div>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Enrolled', value: total_enrolled,         color: 'text-white' },
+          { label: 'Enrolled', value: total_enrolled, color: 'text-white' },
           { label: 'Avg Attendance', value: `${average_attendance}%`, color: 'text-brand-400' },
           { label: 'Below Threshold', value: below_threshold_count, color: 'text-red-400' },
           { label: 'Min Threshold', value: `${min_threshold}%`, color: 'text-yellow-400' },
@@ -280,8 +336,8 @@ function StatsPanel({ stats }) {
 function CreateCourseModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: '', min_attendance_threshold: 75 })
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [result, setResult]   = useState(null)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()

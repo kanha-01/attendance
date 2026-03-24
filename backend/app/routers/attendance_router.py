@@ -125,6 +125,9 @@ async def attendance_session(
             marked_this_session.add(rec.student_id)
 
         # ── Main frame loop ───────────────────────────────────────────────────
+
+        frame_counter = 0
+        PROCESS_EVERY_N_FRAMES = 3  # tune between 2–4
         while True:
             try:
                 msg = await websocket.receive_json()
@@ -141,6 +144,9 @@ async def attendance_session(
             if not b64_data:
                 continue
 
+            frame_counter += 1
+            if frame_counter % PROCESS_EVERY_N_FRAMES != 0:
+                continue  # skip this frame entirely
             # Decode frame
             rgb_frame = decode_base64_frame(b64_data)
             if rgb_frame is None:
@@ -155,6 +161,10 @@ async def attendance_session(
 
             # Update liveness tracker
             liveness_results = liveness_tracker.update_frame(detections)
+            active_centres = [
+                liveness_tracker._centre(f["location"]) for f in liveness_results
+            ]
+            liveness_tracker.purge_stale(active_centres)
 
             face_feedback = []
             newly_marked = []

@@ -8,6 +8,10 @@ from ..database import get_db
 from .. import models, schemas
 from ..auth import require_faculty
 
+from fastapi.responses import StreamingResponse
+import csv, io
+from datetime import date as date_type
+
 router = APIRouter(prefix="/api/faculty", tags=["faculty"])
 
 
@@ -187,3 +191,40 @@ def get_profile(
         "email": faculty.email,
         "username": current_user.username,
     }
+
+# ── Export attendance ────────────────────────────────────────────────────────
+@router.get("/courses/{course_id}/export")
+def export_attendance(
+    course_id: int,
+    format: str = "csv",
+    db: Session = Depends(get_db),
+    current_user=Depends(require_faculty),
+):
+    faculty = _get_faculty(current_user, db)
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.faculty_id == faculty.id,
+    ).first()
+    if not course:
+        raise HTTPException(404, "Course not found")
+
+    records = db.query(models.Attendance).filter(
+        models.Attendance.course_id == course_id
+    ).order_by(models.Attendance.date, models.Attendance.student_id).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Date", "Student Name", "Reg Number", "Present"])
+    for r in records:
+        writer.writerow([
+            str(r.date),
+            r.student.name if r.student else "",
+            r.student.reg_number if r.student else "",
+            "Yes" if r.status else "No",
+        ])
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={course.name}_attendance.csv"}
+    )
