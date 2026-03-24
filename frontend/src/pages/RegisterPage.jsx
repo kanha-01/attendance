@@ -99,11 +99,15 @@ function StudentForm({ loading, setLoading, error, setError, success, setSuccess
         photo_right: photos.right ? { name: photos.right.name, size: photos.right.size, type: photos.right.type } : null,
       }
       console.log('[Register Student] Sending data:', bodyForLog)
-      await api.post('/api/auth/register/student', fd)
+      await api.post('/api/auth/register/student', fd, { timeout: 180000 })
       setSuccess('Registration successful! Redirecting to login...')
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed')
+      if (err.code === 'ECONNABORTED') {
+        setError('Registration is taking too long. Please wait and try logging in once before retrying.')
+      } else {
+        setError(err.response?.data?.detail || 'Registration failed')
+      }
     } finally {
       setLoading(false)
     }

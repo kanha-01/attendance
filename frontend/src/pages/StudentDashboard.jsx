@@ -78,10 +78,14 @@ function EnrolledCourses() {
     )
   }
 
+  const handleUnenrolled = (courseId) => {
+    setCourses((prev) => prev.filter((c) => c.course_id !== courseId))
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
       {courses.map(c => (
-        <AttendanceCard key={c.course_id} course={c} />
+        <AttendanceCard key={c.course_id} course={c} onUnenrolled={handleUnenrolled} />
       ))}
     </div>
   )
@@ -175,13 +179,28 @@ function AllCourses() {
 }
 
 // ── Attendance Card ───────────────────────────────────────────────────────────
-function AttendanceCard({ course }) {
+function AttendanceCard({ course, onUnenrolled }) {
   const pct = course.percentage
   const ok  = !course.below_threshold
   const clr = ok ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444'
   const r   = 28
   const circ = 2 * Math.PI * r
   const offset = circ - (pct / 100) * circ
+  const [unenrolling, setUnenrolling] = useState(false)
+  const [unenrollError, setUnenrollError] = useState('')
+
+  const handleUnenroll = async () => {
+    setUnenrollError('')
+    setUnenrolling(true)
+    try {
+      await api.delete(`/api/students/enroll/${course.course_id}`)
+      onUnenrolled?.(course.course_id)
+    } catch (err) {
+      setUnenrollError(err.response?.data?.detail || 'Failed to unenroll')
+    } finally {
+      setUnenrolling(false)
+    }
+  }
 
   return (
     <div className={`card hover:border-brand-500/30 transition-all duration-200
@@ -222,6 +241,21 @@ function AttendanceCard({ course }) {
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={handleUnenroll}
+        disabled={unenrolling}
+        className="mt-3 w-full btn-ghost text-xs py-2 border border-red-500/30 text-red-400 hover:bg-red-500/10"
+      >
+        {unenrolling ? 'Unenrolling...' : 'Unenroll from Course'}
+      </button>
+
+      {unenrollError && (
+        <div className="mt-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
+          {unenrollError}
+        </div>
+      )}
 
       {course.below_threshold && course.total_classes > 0 && (
         <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">

@@ -247,6 +247,9 @@ def export_attendance(
 
     # Header: Sr.No. | Reg No. | Name | date1 | date2 | ... | Total Present | Total Classes | %
     header = ["Sr.No.", "Reg No.", "Name"] + all_dates + ["Total Present", "Total Classes", "Attendance %"]
+
+    # Header: Sr.No. | Reg No. | Name | date1 | date2 | ... | Total Present | Total Classes | %
+    header = ["Sr.No.", "Reg No.", "Name"] + all_dates + ["Total Present", "Total Classes", "Attendance %"]
     writer.writerow(header)
 
     for sr, enr in enumerate(enrollments, start=1):
@@ -272,6 +275,11 @@ def export_attendance(
 
     # ── Return as CSV stream ───────────────────────────────────────────────
     output.seek(0)
+    filename = f"{course.name.replace(' ', '_')}_attendance"
+    if att_date:
+        filename += f"_{att_date}"
+    filename += ".csv"
+
     filename = f"{course.name.replace(' ', '_')}_attendance"
     if att_date:
         filename += f"_{att_date}"
