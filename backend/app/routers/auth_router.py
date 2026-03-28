@@ -7,6 +7,13 @@ from typing import Optional
 
 from ..database import get_db
 from .. import models, schemas
+from ..schemas import (
+    MNNIT_EMAIL_RE,
+    PASSWORD_RE,
+    REG_NUMBER_RE,
+    SERIAL_RE,
+    USERNAME_RE,
+)
 from ..auth import (
     hash_password, verify_password,
     create_access_token, get_current_user
