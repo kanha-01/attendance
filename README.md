@@ -79,12 +79,18 @@ brew install cmake boost dlib
 ```bash
 cd backend
 
-# 1. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+# 1. Create and activate virtual environment
+#if system have conda installed
+conda create -p venv python==3.12.0
+conda activate venv/
+
+#if conda is not installed
+python3.12.0 -m venv venv
+source venv/bin/activate
 
 # 2. Install dependencies (dlib takes ~5 min to compile)
 pip install -r requirements.txt
+
 
 # 3. Start the API server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
