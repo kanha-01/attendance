@@ -129,6 +129,7 @@ def get_profile(
         "serial_number": student.serial_number,
         "username": current_user.username,
         "has_face_data": bool(student.face_encodings),
+        "profile_photo": student.profile_photo,
     }
 
 # ── Unenroll from a course ────────────────────────────────────────────────────

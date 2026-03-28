@@ -191,6 +191,7 @@ def get_profile(
         "name": faculty.name,
         "email": faculty.email,
         "username": current_user.username,
+        "profile_photo": faculty.profile_photo,
     }
 
 # ── Export attendance ────────────────────────────────────────────────────────

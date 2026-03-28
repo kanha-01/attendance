@@ -4,6 +4,27 @@ import api from '../api/axios'
 
 const TABS = ['Student', 'Faculty']
 
+// ── Validation rules ──────────────────────────────────────────────────────────
+const RULES = {
+  username:      { re: /^[a-zA-Z0-9]+$/, msg: 'Alphanumeric only, no spaces' },
+  password:      {
+    re: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
+    msg: 'Min 8 chars with uppercase, lowercase, digit & special character',
+  },
+  college_email: { re: /^[a-zA-Z0-9]+@mnnit\.ac\.in$/, msg: 'Must be alphanumeric@mnnit.ac.in' },
+  reg_number:    { re: /^\d{8}$/, msg: 'Must be exactly 8 digits' },
+  serial_number: { re: /^\d+$/, msg: 'Must contain digits only' },
+}
+
+function validateField(name, value) {
+  if (!value && name !== 'serial_number') return 'Required'
+  if (!value && name === 'serial_number') return ''
+  const rule = RULES[name]
+  if (!rule) return ''
+  return rule.re.test(value.trim()) ? '' : rule.msg
+}
+
+
 export default function RegisterPage() {
   const [tab, setTab]         = useState('Student')
   const [loading, setLoading] = useState(false)
@@ -67,8 +88,17 @@ function StudentForm({ loading, setLoading, error, setError, success, setSuccess
   const [form, setForm] = useState({
     username: '', password: '', name: '', reg_number: '', college_email: '', serial_number: '',
   })
-  const [photos, setPhotos] = useState({ front: null, left: null, right: null })
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [photos, setPhotos]   = useState({ front: null, left: null, right: null })
   const [previews, setPreviews] = useState({ front: null, left: null, right: null })
+
+  const setField = (name, value) => {
+    // Auto-trim username and strip spaces as user types
+    const v = name === 'username' ? value.replace(/\s/g, '') : value
+    setForm((f) => ({ ...f, [name]: v }))
+    // Clear error on change
+    if (fieldErrors[name]) setFieldErrors((e) => ({ ...e, [name]: '' }))
+  }
 
   const handlePhoto = (slot) => (e) => {
     const file = e.target.files[0]
@@ -77,37 +107,48 @@ function StudentForm({ loading, setLoading, error, setError, success, setSuccess
     setPreviews((p) => ({ ...p, [slot]: URL.createObjectURL(file) }))
   }
 
+  const validateAll = () => {
+    const errs = {}
+    const fieldsToCheck = ['username', 'password', 'college_email', 'reg_number']
+    fieldsToCheck.forEach((f) => {
+      const e = validateField(f, form[f])
+      if (e) errs[f] = e
+    })
+    if (!form.name.trim()) errs.name = 'Required'
+    if (form.serial_number.trim()) {
+      const e = validateField('serial_number', form.serial_number)
+      if (e) errs.serial_number = e
+    }
+    return errs
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    const errs = validateAll()
+    if (Object.keys(errs).length) {
+      setFieldErrors(errs)
+      return
+    }
+
     if (!photos.front || !photos.left || !photos.right) {
       setError('Please upload all three face photos.')
       return
     }
+
     setLoading(true)
     try {
       const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v))
+      Object.entries(form).forEach(([k, v]) => fd.append(k, typeof v === 'string' ? v.trim() : v))
       fd.append('photo_front', photos.front)
       fd.append('photo_left',  photos.left)
       fd.append('photo_right', photos.right)
-      //log
-      const bodyForLog = {
-        ...form,
-        photo_front: photos.front ? { name: photos.front.name, size: photos.front.size, type: photos.front.type } : null,
-        photo_left:  photos.left  ? { name: photos.left.name, size: photos.left.size, type: photos.left.type } : null,
-        photo_right: photos.right ? { name: photos.right.name, size: photos.right.size, type: photos.right.type } : null,
-      }
-      console.log('[Register Student] Sending data:', bodyForLog)
-      await api.post('/api/auth/register/student', fd, { timeout: 180000 })
+      await api.post('/api/auth/register/student', fd)
       setSuccess('Registration successful! Redirecting to login...')
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      if (err.code === 'ECONNABORTED') {
-        setError('Registration is taking too long. Please wait and try logging in once before retrying.')
-      } else {
-        setError(err.response?.data?.detail || 'Registration failed')
-      }
+      setError(err.response?.data?.detail || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -119,19 +160,47 @@ function StudentForm({ loading, setLoading, error, setError, success, setSuccess
       {success && <Alert type="success" msg={success} />}
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Full Name"     value={form.name}          onChange={(v) => setForm({...form, name: v})}          placeholder="John Doe" />
-        <Field label="Username"      value={form.username}      onChange={(v) => setForm({...form, username: v})}      placeholder="johndoe" />
-        <Field label="Reg. Number"   value={form.reg_number}    onChange={(v) => setForm({...form, reg_number: v})}    placeholder="2021CS001" />
-        <Field label="Serial No."    value={form.serial_number} onChange={(v) => setForm({...form, serial_number: v})} placeholder="Optional" required={false} />
-        <Field label="College Email" value={form.college_email} onChange={(v) => setForm({...form, college_email: v})} placeholder="john@college.edu" className="col-span-2" />
-        <Field label="Password" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} placeholder="Min 6 chars" className="col-span-2" />
+        <Field
+          label="Full Name" value={form.name}
+          onChange={(v) => setField('name', v)} placeholder="John Doe"
+          error={fieldErrors.name}
+        />
+        <Field
+          label="Username" value={form.username}
+          onChange={(v) => setField('username', v)} placeholder="johndoe123"
+          error={fieldErrors.username}
+          hint="Alphanumeric, no spaces"
+        />
+        <Field
+          label="Reg. Number" value={form.reg_number}
+          onChange={(v) => setField('reg_number', v)} placeholder="20240001"
+          error={fieldErrors.reg_number}
+          hint="Exactly 8 digits"
+        />
+        <Field
+          label="Serial No." value={form.serial_number}
+          onChange={(v) => setField('serial_number', v)} placeholder="Optional (digits only)"
+          required={false} error={fieldErrors.serial_number}
+        />
+        <Field
+          label="College Email" value={form.college_email}
+          onChange={(v) => setField('college_email', v)} placeholder="abc123@mnnit.ac.in"
+          className="col-span-2" error={fieldErrors.college_email}
+          hint="Must end with @mnnit.ac.in"
+        />
+        <Field
+          label="Password" type="password" value={form.password}
+          onChange={(v) => setField('password', v)}
+          placeholder="Min 8 chars, upper/lower/digit/symbol"
+          className="col-span-2" error={fieldErrors.password}
+        />
       </div>
 
       {/* Photo uploads */}
       <div>
-        <p className="text-sm font-medium text-zinc-300 mb-2">
+        <p className="text-sm font-medium text-zinc-300 mb-1">
           Face Photos <span className="text-red-400">*</span>
-          <span className="text-zinc-500 font-normal ml-1">(front, left profile, right profile)</span>
+          <span className="text-zinc-500 font-normal ml-1">(front, left, right — front will be your profile picture)</span>
         </p>
         <div className="grid grid-cols-3 gap-3">
           {['front', 'left', 'right'].map((slot) => (
@@ -156,16 +225,40 @@ function StudentForm({ loading, setLoading, error, setError, success, setSuccess
 
 // ── Faculty Form ──────────────────────────────────────────────────────────────
 function FacultyForm({ loading, setLoading, error, setError, success, setSuccess, navigate }) {
-  const [form, setForm] = useState({ username: '', password: '', name: '', email: '' })
+  const [form, setForm]         = useState({ username: '', password: '', name: '', email: '' })
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  const setField = (name, value) => {
+    const v = name === 'username' ? value.replace(/\s/g, '') : value
+    setForm((f) => ({ ...f, [name]: v }))
+    if (fieldErrors[name]) setFieldErrors((e) => ({ ...e, [name]: '' }))
+  }
+
+  const validateAll = () => {
+    const errs = {}
+    if (!form.name.trim()) errs.name = 'Required'
+    const uErr = validateField('username', form.username)
+    if (uErr) errs.username = uErr
+    const pErr = validateField('password', form.password)
+    if (pErr) errs.password = pErr
+    if (!form.email.trim()) errs.email = 'Required'
+    return errs
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    const errs = validateAll()
+    if (Object.keys(errs).length) { setFieldErrors(errs); return }
+
     setLoading(true)
     try {
-      //log
-      console.log('[Register Faculty] Sending data:', form)
-      await api.post('/api/auth/register/faculty', form)
+      await api.post('/api/auth/register/faculty', {
+        ...form,
+        username: form.username.trim(),
+        name: form.name.trim(),
+        email: form.email.trim(),
+      })
       setSuccess('Faculty account created! Redirecting to login...')
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
@@ -179,10 +272,27 @@ function FacultyForm({ loading, setLoading, error, setError, success, setSuccess
     <form onSubmit={handleSubmit} className="card space-y-4">
       {error   && <Alert type="error"   msg={error} />}
       {success && <Alert type="success" msg={success} />}
-      <Field label="Full Name"  value={form.name}     onChange={(v) => setForm({...form, name: v})}     placeholder="Prof. Jane Smith" />
-      <Field label="Username"   value={form.username} onChange={(v) => setForm({...form, username: v})} placeholder="prof_jane" />
-      <Field label="Work Email" value={form.email}    onChange={(v) => setForm({...form, email: v})}    placeholder="jane@university.edu" />
-      <Field label="Password" type="password" value={form.password} onChange={(v) => setForm({...form, password: v})} placeholder="Min 6 chars" />
+      <Field
+        label="Full Name" value={form.name}
+        onChange={(v) => setField('name', v)} placeholder="Prof. Jane Smith"
+        error={fieldErrors.name}
+      />
+      <Field
+        label="Username" value={form.username}
+        onChange={(v) => setField('username', v)} placeholder="profjane"
+        error={fieldErrors.username} hint="Alphanumeric, no spaces"
+      />
+      <Field
+        label="Work Email" value={form.email}
+        onChange={(v) => setField('email', v)} placeholder="jane@university.edu"
+        error={fieldErrors.email}
+      />
+      <Field
+        label="Password" type="password" value={form.password}
+        onChange={(v) => setField('password', v)}
+        placeholder="Min 8 chars, upper/lower/digit/symbol"
+        error={fieldErrors.password}
+      />
       <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
         {loading
           ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -193,18 +303,24 @@ function FacultyForm({ loading, setLoading, error, setError, success, setSuccess
 }
 
 // ── Reusable sub-components ───────────────────────────────────────────────────
-function Field({ label, value, onChange, placeholder, type = 'text', required = true, className = '' }) {
+function Field({ label, value, onChange, placeholder, type = 'text', required = true, className = '', error, hint }) {
   return (
     <div className={className}>
       <label className="block text-xs font-medium text-zinc-400 mb-1">{label}</label>
       <input
-        className="input-base !py-2.5 !text-sm"
+        className={`input-base !py-2.5 !text-sm ${error ? '!border-red-500/60 !ring-red-500/20' : ''}`}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
       />
+      {error
+        ? <p className="text-xs text-red-400 mt-1">{error}</p>
+        : hint
+          ? <p className="text-xs text-zinc-600 mt-1">{hint}</p>
+          : null
+      }
     </div>
   )
 }

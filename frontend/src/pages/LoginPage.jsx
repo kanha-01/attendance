@@ -6,16 +6,17 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate   = useNavigate()
 
-  const [form, setForm]     = useState({ username: '', password: '' })
+  const [form, setForm]       = useState({ username: '', password: '' })
   const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState('')
+  const [error, setError]     = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const user = await login(form.username, form.password)
+      // Trim username before sending
+      const user = await login(form.username.trim(), form.password)
       navigate(user.role === 'faculty' ? '/faculty' : '/student')
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid username or password')
@@ -26,12 +27,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface px-4 relative overflow-hidden">
-      {/* Glow */}
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
                       bg-brand-600/8 rounded-full blur-[100px]" />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-600/40">
@@ -62,7 +61,7 @@ export default function LoginPage() {
               type="text"
               placeholder="Enter your username"
               value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              onChange={(e) => setForm({ ...form, username: e.target.value.replace(/\s/g, '') })}
               required
               autoFocus
             />

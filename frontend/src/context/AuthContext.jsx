@@ -24,16 +24,31 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = useCallback(async (username, password) => {
-    const { data } = await api.post('/api/auth/login', { username, password })
+    const { data } = await api.post('/api/auth/login', { username: username.trim(), password })
     localStorage.setItem('token', data.access_token)
     api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`
 
-    // Fetch full profile
     const me = await api.get('/api/auth/me')
     const fullUser = { ...data, ...me.data }
     localStorage.setItem('user', JSON.stringify(fullUser))
     setUser(fullUser)
     return fullUser
+  }, [])
+
+  // Call after any profile update to sync localStorage + state
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await api.get('/api/auth/me')
+      const token = localStorage.getItem('token')
+      const existing = JSON.parse(localStorage.getItem('user') || '{}')
+      const updated = { ...existing, ...me.data }
+      localStorage.setItem('user', JSON.stringify(updated))
+      setUser(updated)
+      return updated
+    } catch {
+      // token expired or revoked — log out
+      logout()
+    }
   }, [])
 
   const logout = useCallback(() => {
@@ -44,7 +59,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, ready }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, ready }}>
       {children}
     </AuthContext.Provider>
   )

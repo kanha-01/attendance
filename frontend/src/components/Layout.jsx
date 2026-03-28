@@ -13,7 +13,6 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems = user?.role === 'faculty' ? NAV_FACULTY : NAV_STUDENT
 
@@ -21,6 +20,9 @@ export default function Layout({ children }) {
     logout()
     navigate('/login')
   }
+
+  const displayName  = user?.name || user?.username || '?'
+  const profilePhoto = user?.profile_photo
 
   return (
     <div className="min-h-screen flex flex-col bg-surface">
@@ -62,16 +64,27 @@ export default function Layout({ children }) {
           <div className="flex items-center gap-3">
             <div className="hidden md:flex flex-col items-end">
               <span className="text-sm font-semibold text-white leading-none">
-                {user?.name || user?.username}
+                {displayName}
               </span>
               <span className="text-xs text-zinc-500 capitalize mt-0.5">{user?.role}</span>
             </div>
 
-            <div className="w-9 h-9 rounded-full bg-brand-600/20 border border-brand-500/30 flex items-center justify-center">
-              <span className="text-brand-400 text-sm font-bold">
-                {(user?.name || user?.username || '?')[0].toUpperCase()}
-              </span>
-            </div>
+            {/* Avatar — links to /profile */}
+            <Link
+              to="/profile"
+              title="View profile"
+              className={`w-9 h-9 rounded-full overflow-hidden border flex items-center justify-center
+                transition-all hover:border-brand-400/60
+                ${location.pathname === '/profile'
+                  ? 'border-brand-500/60 bg-brand-600/20'
+                  : 'border-brand-500/30 bg-brand-600/20'
+                }`}
+            >
+              {profilePhoto
+                ? <img src={profilePhoto} alt={displayName} className="w-full h-full object-cover" />
+                : <span className="text-brand-400 text-sm font-bold">{displayName[0].toUpperCase()}</span>
+              }
+            </Link>
 
             <button
               onClick={handleLogout}

@@ -8,6 +8,7 @@ import RegisterPage      from './pages/RegisterPage'
 import StudentDashboard  from './pages/StudentDashboard'
 import FacultyDashboard  from './pages/FacultyDashboard'
 import AttendancePage    from './pages/AttendancePage'
+import ProfilePage       from './pages/ProfilePage'
 import NotFound          from './pages/NotFound'
 
 function ProtectedRoute({ children, requiredRole }) {
@@ -41,12 +42,22 @@ export default function App() {
       <AuthProvider>
         <Routes>
           {/* Public */}
-          <Route path="/"          element={<LandingPage />} />
-          <Route path="/login"     element={<LoginPage />} />
-          <Route path="/register"  element={<RegisterPage />} />
+          <Route path="/"         element={<LandingPage />} />
+          <Route path="/login"    element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           {/* Auto-redirect from /dashboard */}
           <Route path="/dashboard" element={<RootRedirect />} />
+
+          {/* Profile — accessible to any authenticated user */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Student */}
           <Route

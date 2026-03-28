@@ -29,6 +29,8 @@ class Student(Base):
     serial_number = Column(String(50), nullable=True)
     # JSON-serialized list of 128-d float arrays (one per uploaded photo)
     face_encodings = Column(Text, nullable=True)
+    # Base64-encoded profile photo (set from photo_front at registration)
+    profile_photo = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="student")
     enrollments = relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
@@ -42,6 +44,8 @@ class Faculty(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(150), nullable=False)
     email = Column(String(200), nullable=False)
+    # Optional base64-encoded profile photo
+    profile_photo = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="faculty")
     courses = relationship("Course", back_populates="faculty", cascade="all, delete-orphan")
