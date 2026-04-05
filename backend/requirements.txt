@@ -1,3 +1,18 @@
+# face_rec — runtime dependencies
+#
+# ── PyTorch with CUDA 12.1 (RTX 3050 / any Ampere GPU) ──────────────────────
+# Install PyTorch FIRST with the CUDA wheel — do NOT use plain pip install torch
+# as that installs a CPU-only build:
+#
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# Then install everything else:
+#   pip install -r requirements.txt
+#
+# Verify GPU is detected:
+#   python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+# Expected output: True  NVIDIA GeForce RTX 3050 Laptop GPU
+# ─────────────────────────────────────────────────────────────────────────────
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
