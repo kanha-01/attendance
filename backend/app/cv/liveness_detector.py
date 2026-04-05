@@ -1,20 +1,10 @@
 """
 liveness_detector.py
-─────────────────────
-Eye Aspect Ratio (EAR) + Blink detection for anti-spoofing.
 
-Algorithm — two independent fast paths (OR logic):
-  ┌─ PATH A – EAR trigger (fastest) ──────────────────────────────────────────┐
-  │  EAR drops below EAR_THRESHOLD for ≥ EAR_TRIGGER_FRAMES consecutive       │
-  │  frames  →  liveness_passed = True immediately.                            │
-  │  Catches partial blinks, squints, and eyes-closed frames without waiting   │
-  │  for the eye to reopen.  Ideal for fast-moving exit-gate subjects.         │
-  └────────────────────────────────────────────────────────────────────────────┘
-  ┌─ PATH B – Blink cycle (fallback) ─────────────────────────────────────────┐
-  │  EAR drops below EAR_THRESHOLD for ≥ EAR_CONSEC_FRAMES consecutive        │
-  │  frames and then rises back above threshold  →  count one blink.           │
-  │  A student is "live" once REQUIRED_BLINKS blinks are recorded.             │
-  └────────────────────────────────────────────────────────────────────────────┘
+Eye Aspect Ratio (EAR) + Blink detection for anti-spoofing.
+Liveness is determined by two parallel paths (OR logic):
+  • PATH A - EAR trigger: EAR below threshold for N consecutive frames.
+  • PATH B - Blink count: count complete blink cycles (closed >= M frames -> open
 
   liveness_passed  =  (ear_triggered)  OR  (blink_count >= REQUIRED_BLINKS)
 
@@ -87,9 +77,9 @@ class FaceState:
     Tracks liveness state for one face across consecutive frames.
 
     Two independent liveness paths run in parallel (OR logic):
-      • PATH A – ear_triggered  : set True once EAR_TRIGGER_FRAMES consecutive
+      • PATH A - ear_triggered  : set True once EAR_TRIGGER_FRAMES consecutive
                                   low-EAR frames are seen.
-      • PATH B – blink_count    : incremented on each complete blink cycle
+      • PATH B - blink_count    : incremented on each complete blink cycle
                                   (closed >= EAR_CONSEC_FRAMES frames -> open).
 
     liveness_passed becomes True as soon as either path fires.
@@ -182,9 +172,9 @@ class LivenessTracker:
             list of {location, encoding, liveness_passed, liveness_source,
                      ear_triggered, blink_count, avg_ear}
 
-            liveness_source: "ear"   – passed via PATH A (fast EAR trigger)
-                             "blink" – passed via PATH B (complete blink cycle)
-                             None    – not yet passed
+            liveness_source: "ear"    -passed via PATH A (fast EAR trigger)
+                             "blink"  -passed via PATH B (complete blink cycle)
+                             None     -not yet passed
         """
         results = []
         for detection in face_detections:
