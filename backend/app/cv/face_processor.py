@@ -21,7 +21,7 @@ try:
     FACE_RECOGNITION_AVAILABLE = True
 except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
-    logging.warning("face_recognition not installed – CV features disabled.")
+    logging.warning("face_recognition not installed - CV features disabled.")
 
 
 logger = logging.getLogger(__name__)
