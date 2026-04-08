@@ -5,19 +5,6 @@ files
 │  │  ├─ auth.py
 │  │  ├─ cv
 │  │  │  ├─ face_processor.py
-│  │  │  ├─ face_rec
-│  │  │  │  ├─ models
-│  │  │  │  │  ├─ encoder_net.py
-│  │  │  │  │  ├─ landmark_net.py
-│  │  │  │  │  └─ __init__.py
-│  │  │  │  ├─ weights
-│  │  │  │  │  ├─ encoder_net.pth
-│  │  │  │  │  └─ landmark_net.pth
-│  │  │  │  ├─ _api.py
-│  │  │  │  ├─ _detector.py
-│  │  │  │  ├─ _device.py
-│  │  │  │  ├─ _runners.py
-│  │  │  │  └─ __init__.py
 │  │  │  ├─ liveness_detector.py
 │  │  │  └─ __init__.py
 │  │  ├─ database.py
@@ -31,7 +18,6 @@ files
 │  │  │  └─ __init__.py
 │  │  ├─ schemas.py
 │  │  └─ __init__.py
-│  ├─ generate_schema.py
 │  └─ requirements.txt
 ├─ frontend
 │  ├─ index.html
