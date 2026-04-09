@@ -3,9 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import api from '../api/axios'
 
-const WS_BASE = window.location.hostname === 'localhost'
-  ? 'ws://localhost:8000'
-  : `ws://${window.location.host}`
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL;
 
 const FRAME_INTERVAL_MS = 200  // send frame every 200ms
 
