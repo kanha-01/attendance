@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# Git
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Database (local)
+attendance.db
+
+# Node (if frontend present)
+node_modules/
+
+# Build artifacts
+dist/
+build/
