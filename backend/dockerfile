@@ -3,7 +3,7 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies (needed for dlib, OpenCV)
+# System deps (rarely change)
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -13,23 +13,20 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy requirements first (for caching)
+# ✅ Copy only requirements FIRST
 COPY requirements.txt .
 
-# Upgrade pip
 RUN pip install --upgrade pip
 
-# Install CPU PyTorch (Render-compatible)
+# ✅ Install torch separately (kept as you want)
 RUN pip install torch torchvision
 
-# Install rest dependencies
+# ✅ Install rest deps
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# ✅ Copy code LAST (this changes most often)
 COPY . .
 
-# Expose port 8000
 EXPOSE 8000
 
-# Start FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
